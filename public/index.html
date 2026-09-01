@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lotería de Cómputo - Gartic Style</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <div id="pantalla-menu" class="card-box">
+    <div class="header-logo">
+      <h1>🖥️ LOTERÍA</h1>
+      <span>Arquitectura de Cómputo</span>
+    </div>
+    
+    <div class="form-group">
+      <label>Tu nombre de jugador</label>
+      <input type="text" id="input-nombre" placeholder="Ej: AlanTuring" maxlength="20">
+    </div>
+    
+    <button class="btn btn-verde" onclick="crearSala()">🎮 Crear Sala</button>
+    
+    <div class="unirse-box">
+      <input type="text" id="input-codigo" placeholder="CÓDIGO" maxlength="4">
+      <button class="btn btn-rojo" onclick="unirseSala()">Unirse</button>
+    </div>
+  </div>
+
+  <div id="pantalla-lobby" style="display:none;">
+    <div class="gp-modal">
+      <div class="gp-header">
+        <button class="gp-btn-icon" onclick="salirAlMenu()">◀ Volver</button>
+        <div class="gp-logo">LOTERÍA</div>
+        <div class="gp-sound" onclick="toggleSonido()">🔊</div>
+      </div>
+
+      <div class="gp-body">
+        <div class="gp-col-left">
+          <div class="gp-players-header">JUGADORES <span id="total-jugadores">1</span>/20</div>
+          <div class="gp-players-list" id="lista-jugadores-gartic">
+          </div>
+          <div class="gp-chat-container">
+            <div class="gp-chat-messages" id="chat-mensajes"></div>
+            <div class="gp-chat-input-box">
+              <input type="text" id="input-chat" placeholder="Escribe un mensaje..." maxlength="200">
+              <button onclick="enviarMensaje()">Enviar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="gp-col-right">
+          <div class="gp-tabs">
+            <button class="gp-tab active" onclick="cambiarTab('preestablecidos')">MODOS</button>
+            <button class="gp-tab" onclick="cambiarTab('ajustes')">AJUSTES</button>
+            <button class="gp-tab" onclick="cambiarTab('torneo')">TORNEO</button>
+          </div>
+
+          <div id="tab-preestablecidos" class="gp-tab-content active">
+            <div class="gp-grid-modes">
+              <div class="gp-mode-card active" data-modo="linea" onclick="seleccionarModo(this, 'linea')">
+                <div class="gp-mode-icon">📏</div>
+                <div class="gp-mode-title">LÍNEA RECTA</div>
+              </div>
+
+              <div class="gp-mode-card" data-modo="cuatro_esquinas" onclick="seleccionarModo(this, 'cuatro_esquinas')">
+                <div class="gp-mode-icon">📐</div>
+                <div class="gp-mode-title">4 ESQUINAS</div>
+              </div>
+
+              <div class="gp-mode-card" data-modo="centro" onclick="seleccionarModo(this, 'centro')">
+                <div class="gp-mode-icon">🎯</div>
+                <div class="gp-mode-title">EL CENTRO</div>
+              </div>
+
+              <div class="gp-mode-card" data-modo="llena" onclick="seleccionarModo(this, 'llena')">
+                <div class="gp-mode-icon">🏆</div>
+                <div class="gp-mode-title">TABLA LLENA</div>
+              </div>
+            </div>
+            
+            <div class="gp-extra-features">
+              <div class="gp-temas-container">
+                <h4>🎨 Tema Visual</h4>
+                <select id="select-tema" onchange="cambiarTema(this.value)">
+                  <option value="clasico">Clásico Mexicano</option>
+                  <option value="noche">Modo Noche</option>
+                  <option value="neon">Neón</option>
+                </select>
+              </div>
+              
+              <div class="gp-invitacion-container">
+                <button class="gp-btn gp-btn-secondary" onclick="generarLinkInvitacion()">🔗 LINK DE INVITACIÓN</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-ajustes" class="gp-tab-content">
+            <div class="gp-settings">
+              <div class="gp-setting-item">
+                <label>Tiempo entre cartas</label>
+                <select id="tiempo-carta" disabled>
+                  <option value="2">2 segundos</option>
+                  <option value="3">3 segundos</option>
+                  <option value="4" selected>4 segundos</option>
+                  <option value="5">5 segundos</option>
+                  <option value="6">6 segundos</option>
+                  <option value="8">8 segundos</option>
+                  <option value="10">10 segundos</option>
+                </select>
+              </div>
+              <div class="gp-setting-item">
+                <label>Power-ups</label>
+                <select id="modo-powerups" disabled>
+                  <option value="off">Desactivado</option>
+                  <option value="on">Activado</option>
+                </select>
+              </div>
+              <div class="gp-nota">
+                <p>⚠️ Solo el anfitrión puede modificar estas opciones.</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-torneo" class="gp-tab-content">
+            <div class="gp-tournament-info">
+              <h3>🏆 Modo Torneo</h3>
+              <p>Los jugadores compiten en rondas eliminatorias.</p>
+              <div class="gp-setting-item">
+                <label>Activar Torneo</label>
+                <select id="tipo-torneo" disabled>
+                  <option value="no">No usar torneo</option>
+                  <option value="simple">Eliminación Simple</option>
+                  <option value="doble">Doble Eliminación</option>
+                  <option value="roundrobin">Round Robin</option>
+                </select>
+              </div>
+              <div class="gp-bracket-preview" id="bracket-preview">
+                <p>Selecciona un tipo de torneo para ver la vista previa.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="gp-bottom-actions">
+            <button class="gp-btn gp-btn-secondary" onclick="copiarCodigo()">🔗 INVITAR</button>
+            <button class="gp-btn gp-btn-primary" onclick="iniciarPartida()" id="btn-empezar">▶ EMPEZAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pantalla-juego" style="display:none;">
+    <div class="top-info-bar card-box">
+      <span>🎯 Modo: <strong id="modo-juego-txt"></strong></span>
+      <span>🃏 Cantadas: <strong id="contador-cartas">0</strong></span>
+      <span>👥 <strong id="total-jugadores-juego"></strong></span>
+      <button class="btn-pausa" onclick="pausarJuego()" id="btn-pausa">⏸️</button>
+    </div>
+    
+    <div class="layout-juego">
+      <div class="zona-cantada">
+        <div class="carta-mexicana grande">
+          <div class="carta-num" id="carta-num">--</div>
+          <div class="carta-img-wrap" id="carta-img-box">
+            <span class="placeholder-icon">🃏</span>
+          </div>
+          <div class="carta-nombre" id="carta-titulo">Barajeando...</div>
+        </div>
+        <button class="btn btn-loteria" onclick="cantarLoteria()">🎉 ¡LOTERÍA!</button>
+        
+        <div class="powerups-container" id="powerups-container" style="display:none; gap: 15px; margin-top: 15px; justify-content: center; align-items: center;">
+          <div class="mystery-box" id="btn-caja" onclick="abrirCajaMisteriosa()" title="Caja Misteriosa">❓</div>
+          <div class="item-slot" id="slot-item" onclick="usarItemGuardado()" title="Tu poder"></div>
+        </div>
+
+        <div class="estadisticas-tiempo-real" id="estadisticas-tiempo-real">
+          <div class="stat-mini">🃏 Cantadas: <span id="stat-cantadas">0</span></div>
+          <div class="stat-mini">✅ Marcadas: <span id="stat-marcadas">0/16</span></div>
+          <div class="stat-mini">📊 Progreso: <span id="stat-progreso">0%</span></div>
+        </div>
+
+        <div class="historial-container">
+          <h4>🃏 Últimas Cartas</h4>
+          <div id="historial-cartas" class="historial-cartas"></div>
+        </div>
+
+        <div class="reacciones-rapidas" id="reacciones-rapidas">
+          <button onclick="enviarReaccion('👍')">👍</button>
+          <button onclick="enviarReaccion('😂')">😂</button>
+          <button onclick="enviarReaccion('😮')">😮</button>
+          <button onclick="enviarReaccion('👏')">👏</button>
+          <button onclick="enviarReaccion('🎉')">🎉</button>
+        </div>
+      </div>
+      
+      <div class="grid-tablero" id="tablero"></div>
+      
+      <div class="sidebar-jugadores card-box">
+        <h3>Progreso de Jugadores</h3>
+        <ul class="player-list" id="lista-progreso"></ul>
+        
+        <div id="bracket-container" class="bracket-container" style="display:none;">
+          <h3>🏆 Bracket del Torneo</h3>
+          <div id="bracket-visual" class="bracket-visual"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-ganador" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h2 class="titulo-ganador">🏆 ¡LOTERÍA! 🏆</h2>
+      <div id="texto-ganador" class="mensaje-ganador"></div>
+      <div class="stats-box" id="stats-box" style="display:none;"></div>
+      <div id="opciones-fin-host" style="display:none;">
+        <button class="btn btn-verde" onclick="volverAlLobby()">🔙 Volver al Lobby</button>
+        <button class="btn btn-rojo" onclick="siguienteRonda()" id="btn-siguiente-ronda" style="display:none;">➡️ Siguiente Ronda</button>
+      </div>
+      <div id="esperando-reinicio" style="display:none;">
+        <p>⏳ Esperando a que el anfitrión reinicie...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-pausa" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h2>⏸️ JUEGO PAUSADO</h2>
+      <p>El anfitrión ha pausado el juego.</p>
+      <button class="btn btn-verde" onclick="reanudarJuego()" id="btn-reanudar">▶ Reanudar</button>
+    </div>
+  </div>
+
+  <div class="control-musica">
+    <button onclick="toggleMusica()" id="btn-musica">🎵 Música: OFF</button>
+  </div>
+
+  <script src="data/cartas.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
