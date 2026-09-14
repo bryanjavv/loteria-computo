@@ -114,7 +114,9 @@ io.on('connection', (socket) => {
         puntuacion: 0,
         victorias: 0,
         bloqueado: false,
-        escudoActivo: false
+        escudoActivo: false,
+        congelado: false,
+        overclockActivo: false
       }],
       intervalo: null,
       mazo: [],
@@ -164,7 +166,9 @@ io.on('connection', (socket) => {
       puntuacion: 0,
       victorias: 0,
       bloqueado: false,
-      escudoActivo: false
+      escudoActivo: false,
+      congelado: false,
+      overclockActivo: false
     };
     
     sala.jugadores.push(jugador);
@@ -553,7 +557,7 @@ io.on('connection', (socket) => {
     if (!sala) return;
     
     const jugador = sala.jugadores.find(j => j.id === socket.id);
-    if (jugador && !jugador.bloqueado) {
+    if (jugador && !jugador.bloqueado && !jugador.congelado) {
       jugador.marcadas = marcadas;
       sala.ultimoUso = Date.now();
       io.to(codigo).emit('progreso_jugadores', sala.jugadores);
@@ -573,16 +577,6 @@ io.on('connection', (socket) => {
     });
     
     switch(tipo) {
-      case 'oraculo':
-        if (sala.indiceCarta < sala.mazo.length) {
-          const siguienteCarta = sala.mazo[sala.indiceCarta];
-          io.to(socket.id).emit('mensaje_chat', { 
-            sistema: true, 
-            mensaje: `👁️ El Oráculo dice: La próxima carta es ${siguienteCarta.nombre} ${siguienteCarta.emoji || ''}`
-          });
-        }
-        break;
-        
       case 'firewall':
         jugador.escudoActivo = true;
         io.to(socket.id).emit('escudo_activado');
@@ -618,6 +612,25 @@ io.on('connection', (socket) => {
         });
         break;
         
+      case 'overclock':
+        jugador.overclockActivo = true;
+        io.to(socket.id).emit('overclock_activado');
+        setTimeout(() => {
+          jugador.overclockActivo = false;
+        }, 10000);
+        break;
+        
+      case 'congelar':
+        sala.pausado = true;
+        io.to(codigo).emit('juego_congelado');
+        setTimeout(() => {
+          sala.pausado = false;
+          if (sala.enJuego) {
+            emitirSiguienteCarta(codigo);
+          }
+        }, 3000);
+        break;
+        
       case 'apagon':
         socket.to(codigo).emit('sufrir_apagon');
         io.to(codigo).emit('mensaje_chat', {
@@ -625,7 +638,64 @@ io.on('connection', (socket) => {
           mensaje: `🌑 ¡${jugador.nombre} lanzó un Apagón!`
         });
         break;
+        
+      case 'debugger':
+        const rivalesDebug = sala.jugadores.filter(j => j.id !== socket.id);
+        if (rivalesDebug.length > 0) {
+          const victimaDebug = rivalesDebug[Math.floor(Math.random() * rivalesDebug.length)];
+          const cartasReveladas = victimaDebug.tabla
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 2)
+            .map(id => CARTAS.find(c => c.id === id))
+            .filter(c => c);
+          
+          io.to(socket.id).emit('debugger_info', { cartas: cartasReveladas });
+        }
+        break;
+        
+      case 'desfragmentar':
+        const rivalesDesfrag = sala.jugadores.filter(j => j.id !== socket.id);
+        if (rivalesDesfrag.length > 0) {
+          const victimaDesfrag = rivalesDesfrag.reduce((max, j) => j.marcadas > max.marcadas ? j : max, rivalesDesfrag[0]);
+          if (!victimaDesfrag.escudoActivo) {
+            io.to(victimaDesfrag.id).emit('recibir_desfragmentar');
+            io.to(codigo).emit('mensaje_chat', {
+              sistema: true,
+              mensaje: `🧹 Desfragmentar limpió frijolitos de ${victimaDesfrag.nombre}`
+            });
+          }
+        }
+        break;
+        
+      case 'antivirus':
+        jugador.bloqueado = false;
+        jugador.congelado = false;
+        jugador.escudoActivo = false;
+        jugador.overclockActivo = false;
+        io.to(socket.id).emit('antivirus_activado');
+        break;
+        
+      case 'bloqueo':
+        const rivalesBloqueo = sala.jugadores.filter(j => j.id !== socket.id);
+        if (rivalesBloqueo.length > 0) {
+          const victimaBloqueo = rivalesBloqueo.reduce((max, j) => j.marcadas > max.marcadas ? j : max, rivalesBloqueo[0]);
+          if (!victimaBloqueo.escudoActivo) {
+            victimaBloqueo.bloqueado = true;
+            io.to(victimaBloqueo.id).emit('bloqueado');
+            setTimeout(() => {
+              victimaBloqueo.bloqueado = false;
+            }, 8000);
+          }
+        }
+        break;
     }
+  });
+
+  socket.on('juego_congelado', ({ codigo }) => {
+    const sala = salas[codigo];
+    if (!sala) return;
+    
+    io.to(codigo).emit('juego_congelado');
   });
 
   socket.on('ataque_bloqueado', ({ codigo }) => {
@@ -668,6 +738,10 @@ io.on('connection', (socket) => {
     if (jugador.bloqueado) {
       return socket.emit('loteria_invalida', 'Estás bloqueado por un power-up enemigo.');
     }
+    
+    if (jugador.congelado) {
+      return socket.emit('loteria_invalida', 'Estás congelado por un power-up enemigo.');
+    }
 
     const gano = verificarVictoria(sala.modoJuego, jugador.tabla, sala.cartasCantadas);
 
@@ -694,6 +768,8 @@ io.on('connection', (socket) => {
       j.tabla = [];
       j.bloqueado = false;
       j.escudoActivo = false;
+      j.congelado = false;
+      j.overclockActivo = false;
       j.cartasCoincidentes = 0;
       j.porcentaje = 0;
     });

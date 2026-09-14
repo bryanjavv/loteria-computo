@@ -19,29 +19,46 @@ let musicaFondo = null;
 let temaActual = 'clasico';
 let itemGuardado = null;
 let cajaEnCooldown = false;
+let overclockActivo = false;
+let congeladoPorEnemigo = false;
 
 const POOL_ITEMS = [
-  ...Array(40).fill('oraculo'),
-  ...Array(30).fill('firewall'),
+  ...Array(25).fill('firewall'),
   ...Array(15).fill('hacker'),
-  ...Array(10).fill('glitch'),
-  ...Array(5).fill('apagon')
+  ...Array(12).fill('glitch'),
+  ...Array(10).fill('overclock'),
+  ...Array(10).fill('congelar'),
+  ...Array(8).fill('apagon'),
+  ...Array(8).fill('debugger'),
+  ...Array(7).fill('desfragmentar'),
+  ...Array(5).fill('antivirus'),
+  ...Array(5).fill('bloqueo')
 ];
 
 const EMOJIS_ITEMS = { 
-  oraculo: '👁️', 
   firewall: '🛡️', 
   hacker: '👾', 
   glitch: '🌀', 
-  apagon: '🌑' 
+  overclock: '⚡',
+  congelar: '🧊',
+  apagon: '🌑',
+  debugger: '🔍',
+  desfragmentar: '🧹',
+  antivirus: '💉',
+  bloqueo: '🚫'
 };
 
 const NOMBRES_ITEMS = {
-  oraculo: 'El Oráculo',
   firewall: 'Firewall',
-  hacker: 'El Hacker',
-  glitch: 'El Glitch',
-  apagon: 'El Apagón'
+  hacker: 'Hacker',
+  glitch: 'Glitch',
+  overclock: 'Overclock',
+  congelar: 'Congelar',
+  apagon: 'Apagón',
+  debugger: 'Debugger',
+  desfragmentar: 'Desfragmentar',
+  antivirus: 'Antivirus',
+  bloqueo: 'Bloqueo'
 };
 
 const NOMBRES_MODOS = {
@@ -332,6 +349,8 @@ function mostrarLobby() {
   historialCartas = [];
   itemGuardado = null;
   cajaEnCooldown = false;
+  overclockActivo = false;
+  congeladoPorEnemigo = false;
   
   if (esHost) {
     document.getElementById('btn-empezar').style.display = 'block';
@@ -430,6 +449,8 @@ socket.on('juego_iniciado', ({ modo, totalJugadores, powerUpsActivados, ronda })
   historialCartas = [];
   itemGuardado = null;
   cajaEnCooldown = false;
+  overclockActivo = false;
+  congeladoPorEnemigo = false;
   
   if (powerUpsActivados) {
     document.getElementById('powerups-container').style.display = 'flex';
@@ -465,13 +486,19 @@ function generarTablero() {
     
     casilla.style.animation = `aparecerCarta 0.4s ease-out ${index * 0.05}s both`;
     
+    const imagenHTML = c.img ? 
+      `<img src="${c.img}" alt="${c.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+      '';
+    
     casilla.innerHTML = `
       <div class="carta-num">${c.id}</div>
       <div class="carta-img-wrap">
-        <span class="placeholder-icon" style="display:flex; font-size:36px;">${c.emoji || '🖥️'}</span>
+        ${imagenHTML}
+        <span class="placeholder-icon" style="display:${c.img ? 'none' : 'flex'}; font-size:36px;">${c.emoji || '🖥️'}</span>
       </div>
       <div class="carta-nombre">${c.nombre}</div>
       <div class="frijolito">🫘</div>
+      <div class="tooltip-desc">${c.desc || c.nombre}</div>
     `;
 
     casilla.onclick = () => {
@@ -480,8 +507,14 @@ function generarTablero() {
         return;
       }
       
-      if (powerUpsActivos.firewall) {
-        mostrarToast('🛡️ Firewall activo, no puedes ser atacado.', 'info');
+      if (congeladoPorEnemigo) {
+        mostrarToast('🧊 Estás congelado por un enemigo.', 'error');
+        return;
+      }
+      
+      if (powerUpsActivos.bloqueado) {
+        mostrarToast('🚫 Estás bloqueado por un enemigo.', 'error');
+        return;
       }
       
       const cartaId = parseInt(casilla.dataset.cartaId);
@@ -521,7 +554,7 @@ function actualizarHistorial() {
   if (!historialDiv) return;
   
   historialDiv.innerHTML = historialCartas.map(c => 
-    `<span class="carta-historial" title="${c.nombre}">${c.emoji || '🖥️'}</span>`
+    `<span class="carta-historial" title="${c.nombre}: ${c.desc}">${c.emoji || '🖥️'}</span>`
   ).join('');
 }
 
@@ -638,16 +671,28 @@ socket.on('nueva_carta', ({ carta, totalCantadas, totalCartas }) => {
 
   const imgBox = document.getElementById('carta-img-box');
   
-  if (cartaActual.img) {
-    imgBox.innerHTML = `
-      <img src="${cartaActual.img}" alt="${cartaActual.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-      <span class="placeholder-icon" style="display:none;">${cartaActual.emoji || '🖥️'}</span>
-    `;
-  } else {
-    imgBox.innerHTML = `
-      <span class="placeholder-icon" style="display:flex;">${cartaActual.emoji || '🖥️'}</span>
-    `;
-  }
+  // Usar innerHTML con opacidad para transición suave
+  imgBox.style.opacity = '0';
+  
+  setTimeout(() => {
+    if (cartaActual.img) {
+      imgBox.innerHTML = `
+        <img src="${cartaActual.img}" alt="${cartaActual.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <span class="placeholder-icon" style="display:none;">${cartaActual.emoji || '🖥️'}</span>
+      `;
+    } else {
+      imgBox.innerHTML = `
+        <span class="placeholder-icon" style="display:flex;">${cartaActual.emoji || '🖥️'}</span>
+      `;
+    }
+    
+    imgBox.style.transition = 'opacity 0.3s ease';
+    imgBox.style.opacity = '1';
+    
+    setTimeout(() => {
+      imgBox.style.transition = 'none';
+    }, 300);
+  }, 150);
 
   if (cartaActual.audio) {
     const audio = new Audio(cartaActual.audio);
@@ -811,9 +856,71 @@ socket.on('escudo_activado', () => {
   }, 15000);
 });
 
+socket.on('overclock_activado', () => {
+  overclockActivo = true;
+  mostrarToast('⚡ Overclock activado: cartas valen doble por 10 segundos', 'success');
+  
+  setTimeout(() => {
+    overclockActivo = false;
+    mostrarToast('⚡ Overclock desactivado', 'info');
+  }, 10000);
+});
+
+socket.on('congelado', () => {
+  if (powerUpsActivos.firewall) {
+    mostrarToast('🛡️ Firewall bloqueó la Congelación.', 'success');
+    return;
+  }
+  
+  congeladoPorEnemigo = true;
+  mostrarToast('🧊 ¡Estás congelado por 3 segundos!', 'error');
+  sonarError();
+  
+  setTimeout(() => {
+    congeladoPorEnemigo = false;
+  }, 3000);
+});
+
+socket.on('bloqueado', () => {
+  if (powerUpsActivos.firewall) {
+    mostrarToast('🛡️ Firewall bloqueó el Bloqueo.', 'success');
+    return;
+  }
+  
+  powerUpsActivos.bloqueado = true;
+  mostrarToast('🚫 ¡No puedes cantar lotería por 8 segundos!', 'error');
+  sonarError();
+  
+  setTimeout(() => {
+    powerUpsActivos.bloqueado = false;
+  }, 8000);
+});
+
+socket.on('debugger_info', ({ cartas }) => {
+  mostrarToast(`🔍 Debugger reveló: ${cartas.map(c => c.nombre).join(', ')}`, 'info');
+});
+
+socket.on('antivirus_activado', () => {
+  powerUpsActivos.firewall = false;
+  powerUpsActivos.bloqueado = false;
+  congeladoPorEnemigo = false;
+  overclockActivo = false;
+  mostrarToast('💉 Antivirus eliminó todos los efectos negativos', 'success');
+});
+
 function cantarLoteria() {
   if (!juegoActivo) {
     mostrarToast('El juego no está activo.', 'error');
+    return;
+  }
+  
+  if (powerUpsActivos.bloqueado) {
+    mostrarToast('🚫 Estás bloqueado, no puedes cantar lotería.', 'error');
+    return;
+  }
+  
+  if (congeladoPorEnemigo) {
+    mostrarToast('🧊 Estás congelado, no puedes cantar lotería.', 'error');
     return;
   }
   
@@ -914,6 +1021,8 @@ function volverAlLobby() {
   historialCartas = [];
   itemGuardado = null;
   cajaEnCooldown = false;
+  overclockActivo = false;
+  congeladoPorEnemigo = false;
   socket.emit('volver_al_lobby', { codigo: miSala });
 }
 

@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Lotería de Cómputo - Gartic Style</title>
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
@@ -17,13 +20,13 @@
     
     <div class="form-group">
       <label>Tu nombre de jugador</label>
-      <input type="text" id="input-nombre" placeholder="Ej: AlanTuring" maxlength="20">
+      <input type="text" id="input-nombre" placeholder="Ej: AlanTuring" maxlength="20" autocomplete="off">
     </div>
     
     <button class="btn btn-verde" onclick="crearSala()">🎮 Crear Sala</button>
     
     <div class="unirse-box">
-      <input type="text" id="input-codigo" placeholder="CÓDIGO" maxlength="4">
+      <input type="text" id="input-codigo" placeholder="CÓDIGO" maxlength="4" autocomplete="off" autocapitalize="characters">
       <button class="btn btn-rojo" onclick="unirseSala()">Unirse</button>
     </div>
   </div>
@@ -44,7 +47,7 @@
           <div class="gp-chat-container">
             <div class="gp-chat-messages" id="chat-mensajes"></div>
             <div class="gp-chat-input-box">
-              <input type="text" id="input-chat" placeholder="Escribe un mensaje..." maxlength="200">
+              <input type="text" id="input-chat" placeholder="Escribe un mensaje..." maxlength="200" autocomplete="off">
               <button onclick="enviarMensaje()">Enviar</button>
             </div>
           </div>
@@ -111,7 +114,7 @@
                 </select>
               </div>
               <div class="gp-setting-item">
-                <label>Power-ups</label>
+                <label>Power-ups (Caja Misteriosa)</label>
                 <select id="modo-powerups" disabled>
                   <option value="off">Desactivado</option>
                   <option value="on">Activado</option>
@@ -232,9 +235,13 @@
     </div>
   </div>
 
-  <div class="control-musica">
+  <div class="menu-flotante">
+  <button class="btn-menu-flotante" onclick="toggleMenuFlotante()" id="btn-menu-flotante">⚙️</button>
+  <div class="menu-flotante-contenido" id="menu-flotante-contenido">
     <button onclick="toggleMusica()" id="btn-musica">🎵 Música: OFF</button>
+    <button onclick="toggleSonido()" id="btn-sonido">🔊 Sonido: ON</button>
   </div>
+</div>
 
   <script src="data/cartas.js"></script>
   <script src="app.js"></script>

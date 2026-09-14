@@ -14,58 +14,57 @@ for archivo in archivos_viejos:
     os.remove(archivo)
 print("🗑️  Audios anteriores eliminados.")
 
-# 3. Diccionario exclusivo con los nombres cortos de tu lista CARTAS
+# 3. Diccionario mapeado exactamente a las 40 cartas de tu lista
 cartas = {
+    "von_neumann": "Von Neumann",
+    "harvard": "Harvard",
     "cpu": "El CPU",
-    "ram": "La Memoria RAM",
-    "bus_datos": "El Bus de Datos",
+    "nucleo": "El Núcleo",
+    "hilo": "El Hilo",
+    "frecuencia": "La Frecuencia de Reloj",
+    "cache": "La Caché",
+    "niveles_cache": "Niveles de Caché",
     "alu": "La ALU",
-    "cache": "La Caché L1",
+    "control": "La Unidad de Control",
+    "registros": "Los Registros",
+    "arquitectura": "La Arquitectura",
+    "buses": "Los Buses",
+    "ciclo": "Ciclo de Instrucción",
+    "ipc": "El IPC",
+    "overclocking": "El Overclocking",
+    "socket": "El Socket",
+    "ram": "La Memoria RAM",
+    "rom": "La Memoria ROM",
+    "semiconductora": "La Memoria Semiconductora",
+    "mrom": "La MROM",
+    "prom": "La PROM",
+    "eeprom": "La EEPROM",
+    "dma": "El DMA",
+    "hdd": "El Disco HDD",
+    "ssd": "El Disco SSD",
+    "cloud": "El Cloud",
+    "virtual": "La Memoria Virtual",
     "gpu": "La GPU",
     "pipeline": "El Pipeline",
-    "ssd": "El Disco SSD",
-    "hdd": "El Disco Duro",
-    "rom": "La Memoria ROM",
-    "registro": "El Registro",
-    "reloj": "El Reloj del Sistema",
-    "motherboard": "La Tarjeta Madre",
-    "control": "La Unidad de Control",
+    "risc": "RISC",
+    "cisc": "CISC",
+    "chipset": "El Chipset",
+    "bios": "El BIOS",
     "fuente": "La Fuente de Poder",
     "disipador": "El Disipador",
-    "pcie": "El Puerto PCIe",
-    "bios": "El BIOS",
-    "bus_dir": "El Bus de Direcciones",
-    "virtual": "La Memoria Virtual",
-    "socket": "El Socket",
-    "chipset": "El Chipset",
-    "puente_norte": "El Puente Norte",
-    "puente_sur": "El Puente Sur",
-    "pila": "La Pila CMOS",
     "ventilador": "El Ventilador",
-    "usb": "El Puerto USB",
-    "hdmi": "El Puerto HDMI",
-    "ethernet": "El Puerto Ethernet",
-    "red": "La Tarjeta de Red",
-    "modem": "El Módem",
-    "router": "El Router",
-    "firewall": "El Firewall",
-    "antivirus": "El Antivirus",
     "so": "El Sistema Operativo",
     "kernel": "El Kernel",
-    "driver": "El Driver",
-    "compilador": "El Compilador",
-    "ensamblador": "El Ensamblador",
-    "interprete": "El Interprete"
+    "multiprocesador": "El Multiprocesador"
 }
 
-# 4. Generar y guardar los audios cortos
-print("🎙️  Generando nuevas voces rápidas...")
+# 4. Generar y guardar los audios con acento mexicano
+print("🎙️  Generando nuevas voces...")
 for nombre_archivo, frase in cartas.items():
     ruta = f"{directorio}/{nombre_archivo}.mp3"
     
-    # Se mantiene el acento mexicano (com.mx)
     tts = gTTS(text=frase, lang='es', tld='com.mx', slow=False)
     tts.save(ruta)
     print(f"✅ Guardado: {nombre_archivo}.mp3 -> '{frase}'")
 
-print("🎉 ¡Todos los audios cortos han sido generados exitosamente!")
+print("🎉 ¡Todos los audios sincronizados con tus CARTAS han sido generados exitosamente!")
